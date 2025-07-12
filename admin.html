@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>抽奖系统管理后台</title>
+    <link rel="stylesheet" href="admin.css">
+    <!-- 引入Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入Font Awesome图标库 -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- 引入Chart.js用于数据可视化 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <!-- 引入高德地图API -->
+    <script src="https://webapi.amap.com/maps?v=1.4.15&key=a782496f310dc379b1c941387e96f07"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- 登录模态框 -->
+    <div id="login-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 transform transition-all">
+            <div class="text-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">管理员登录</h2>
+                <p class="text-gray-500 mt-1">请输入账号密码登录管理后台</p>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">账号</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
+                            <i class="fa fa-user"></i>
+                        </span>
+                        <input type="text" id="username" class="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="请输入账号">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">密码</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
+                            <i class="fa fa-lock"></i>
+                        </span>
+                        <input type="password" id="password" class="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="请输入密码">
+                    </div>
+                </div>
+                <button id="login-btn" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg shadow transform transition hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-50">
+                    登录
+                </button>
+                <p id="login-error" class="text-red-500 text-center hidden">账号或密码错误，请重试</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 管理后台主页面 -->
+    <div id="admin-dashboard" class="hidden">
+        <!-- 顶部导航栏 -->
+        <header class="bg-white shadow-md fixed top-0 left-0 right-0 z-40">
+            <div class="container mx-auto px-4 py-3 flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <i class="fa fa-trophy text-yellow-500 text-2xl"></i>
+                    <h1 class="text-xl font-bold text-gray-800">抽奖系统管理后台</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span class="text-gray-600 hidden md:inline-block">管理员</span>
+                    <button id="logout-btn" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1 rounded-lg text-sm transition">
+                        <i class="fa fa-sign-out mr-1"></i> 退出
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- 主内容区 -->
+        <main class="container mx-auto pt-24 pb-12 px-4">
+            <!-- 统计卡片 -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="bg-white rounded-xl shadow p-6 transform transition hover:scale-[1.02] hover:shadow-lg">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm">总访问量</p>
+                            <h3 class="text-3xl font-bold text-gray-800 mt-1" id="total-visits">0</h3>
+                        </div>
+                        <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-500">
+                            <i class="fa fa-eye text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 text-sm text-green-500 flex items-center">
+                        <i class="fa fa-arrow-up mr-1"></i> <span>今日新增 <span id="today-visits">0</span> 次</span>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow p-6 transform transition hover:scale-[1.02] hover:shadow-lg">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm">总抽奖次数</p>
+                            <h3 class="text-3xl font-bold text-gray-800 mt-1" id="total-draws">0</h3>
+                        </div>
+                        <div class="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center text-purple-500">
+                            <i class="fa fa-random text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 text-sm text-green-500 flex items-center">
+                        <i class="fa fa-arrow-up mr-1"></i> <span>今日新增 <span id="today-draws">0</span> 次</span>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow p-6 transform transition hover:scale-[1.02] hover:shadow-lg">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm">已领取奖品</p>
+                            <h3 class="text-3xl font-bold text-gray-800 mt-1" id="claimed-prizes">0</h3>
+                        </div>
+                        <div class="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center text-green-500">
+                            <i class="fa fa-gift text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 text-sm text-gray-500">
+                        <span>领取率 <span id="claim-rate">0%</span></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 图表和地图区域 -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                <!-- 奖品分布图表 -->
+                <div class="bg-white rounded-xl shadow p-6 lg:col-span-1">
+                    <h2 class="text-lg font-bold text-gray-800 mb-4">奖品分布</h2>
+                    <div class="h-64">
+                        <canvas id="prize-chart"></canvas>
+                    </div>
+                </div>
+
+                <!-- 访问趋势图表 -->
+                <div class="bg-white rounded-xl shadow p-6 lg:col-span-1">
+                    <h2 class="text-lg font-bold text-gray-800 mb-4">访问趋势</h2>
+                    <div class="h-64">
+                        <canvas id="trend-chart"></canvas>
+                    </div>
+                </div>
+
+                <!-- 地图定位 -->
+                <div class="bg-white rounded-xl shadow p-6 lg:col-span-1">
+                    <h2 class="text-lg font-bold text-gray-800 mb-4">访问者分布</h2>
+                    <div class="h-64 rounded-lg overflow-hidden border border-gray-200 relative">
+                        <div id="visitor-map" class="w-full h-full"></div>
+                        <div class="absolute top-2 right-2 bg-white bg-opacity-80 px-2 py-1 rounded text-xs shadow-md">
+                            <i class="fa fa-map-marker text-red-500 mr-1"></i> 访问者位置
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 访问记录表格 -->
+            <div class="bg-white rounded-xl shadow overflow-hidden">
+                <div class="p-6 border-b border-gray-200">
+                    <h2 class="text-lg font-bold text-gray-800">访问记录</h2>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">时间</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IP地址</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">位置</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200" id="visitor-table-body">
+                            <!-- 表格内容将通过JavaScript动态生成 -->
+                            <tr>
+                                <td colspan="4" class="px-6 py-10 text-center text-gray-500">
+                                    <i class="fa fa-spinner fa-spin mr-2"></i> 加载中...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+                    <div class="text-sm text-gray-500">显示 <span id="showing-count">0</span> 条记录</div>
+                    <div class="flex space-x-2">
+                        <button id="prev-page" class="px-3 py-1 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                            上一页
+                        </button>
+                        <button id="next-page" class="px-3 py-1 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                            下一页
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="admin.js"></script>
+</body>
+</html>
