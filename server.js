@@ -4,12 +4,15 @@ const fs = require('fs');
 const path = require('path');
 
 const server = jsonServer.create();
+// 提供静态文件服务
+server.use(jsonServer.static(__dirname));
 const dbPath = path.join(__dirname, 'db.json');
 const router = process.env.NODE_ENV === 'production' 
   ? jsonServer.router(JSON.parse(fs.readFileSync(dbPath, 'utf8'))) 
   : jsonServer.router(dbPath);
 
-const middlewares = jsonServer.defaults();
+// 禁用默认静态文件服务，使用我们自定义的配置
+const middlewares = jsonServer.defaults({ static: false });
 const port = process.env.PORT || 3000;
 
 // 添加CORS支持
@@ -68,6 +71,14 @@ server.use((err, req, res, next) => {
 });
 
 server.use(middlewares);
+
+// 处理SPA路由，所有非API请求返回index.html
+server.get('*', (req, res) => {
+  if (!req.path.startsWith('/api')) {
+    res.sendFile(path.join(__dirname, 'index.html'));
+  }
+});
+
 server.use(router);
 
 // 使db可用于中间件
