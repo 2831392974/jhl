@@ -1,7 +1,14 @@
 const jsonServer = require('json-server');
 const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
+
 const server = jsonServer.create();
-const router = jsonServer.router('db.json');
+const dbPath = path.join(__dirname, 'db.json');
+const router = process.env.NODE_ENV === 'production' 
+  ? jsonServer.router(JSON.parse(fs.readFileSync(dbPath, 'utf8'))) 
+  : jsonServer.router(dbPath);
+
 const middlewares = jsonServer.defaults();
 const port = process.env.PORT || 3000;
 
@@ -43,9 +50,21 @@ const logEntry = {
 };
 
     // 将访问记录添加到数据库
-    req.app.db.get('visitors').push(logEntry).write();
+    // 仅在开发环境记录访问日志到数据库
+    if (process.env.NODE_ENV !== 'production') {
+      req.app.db.get('visitors').push(logEntry).write();
+    }
   }
   next();
+});
+
+// 全局错误处理中间件
+server.use((err, req, res, next) => {
+  console.error('服务器错误:', err);
+  res.status(500).json({
+    error: '服务器内部错误',
+    message: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
 });
 
 server.use(middlewares);
@@ -58,6 +77,11 @@ server.use((req, res, next) => {
   next();
 });
 
-server.listen(port, () => {
-  console.log(`JSON Server is running on port ${port}`);
-});
+module.exports = server;
+
+// 本地开发时启动服务器
+if (process.env.NODE_ENV !== 'production') {
+  server.listen(port, () => {
+    console.log(`JSON Server is running on port ${port}`);
+  });
+}
